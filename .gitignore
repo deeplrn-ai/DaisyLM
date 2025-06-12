@@ -1,0 +1,57 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python/
+env/
+venv/
+.venv/
+.env
+
+# Data
+# Data directories can be very large and should generally not be committed to Git.
+# Consider using Git LFS for large model files or external storage solutions.
+data/raw/
+data/processed/
+data/external/
+
+# Model Checkpoints and Outputs
+# Trained model weights and any model-generated outputs
+checkpoints/
+models/*.pth
+models/*.pt
+models/*.ckpt
+models/*.bin
+models/*.safetensors
+outputs/
+logs/
+runs/
+
+# Jupyter Notebook specific
+.ipynb_checkpoints/
+*.ipynb-filter
+*.ipynb_checkpoints
+
+# IDE and Editor files
+.idea/                 # IntelliJ / PyCharm
+.vscode/               # VS Code
+*.sublime-project      # Sublime Text
+*.sublime-workspace
+.DS_Store              # macOS
+Thumbs.db              # Windows
+
+# pip
+pip-log.txt
+pip-delete-this-arg.txt
+*.egg-info/
+.coverage
+.tox/
+
+# pytest
+.pytest_cache/
+
+# Build artifacts
+dist/
+build/
+*.egg
