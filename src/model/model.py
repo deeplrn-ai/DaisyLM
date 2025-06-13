@@ -12,6 +12,7 @@ class ModelConfig:
     d_latent: int = 32
     d_rope_sub: int = 16
     attn_dropout: float = 0.1
+    ffn_dropout: float = 0.1
 
 class RMSNorm(nn.Module):
     def __init__(self, features: int, eps: float = 1e-6):
@@ -135,3 +136,24 @@ class MLP(nn.Module):
 
     def forward(self, x: torch.Tensor):
         return self.l2(F.silu(self.l1(x)) * self.l3(x))
+
+
+class Block(nn.Module):
+    def __init__(self, config: ModelConfig):
+        super().__init__()
+        self.attn = MLA(config)
+        self.ffn = MLP(config.d_model, config.intermediate_size)
+        self.attn_norm = RMSNorm(config.d_model)
+        self.ffn_norm = RMSNorm(config.d_model)
+        self.attn_dropout = nn.Dropout(config.attn_dropout)
+        self.ffn_dropout = nn.Dropout(config.ffn_dropout)
+
+    def forward(self, x: torch.Tensor, freqs_cis: torch.Tensor, past_key_values=None, use_cache=False):
+        h = self.attn_norm(x)
+        attn_output, updated_key_values = self.attn(h, freqs_cis, past_key_values, use_cache)
+        attn_output = self.attn_dropout(attn_output)
+        x = x + attn_output
+        ffn_output = self.ffn_dropout(self.ffn(self.ffn_norm(x)))
+        x = x + ffn_output
+
+        return x, updated_key_values if use_cache else None
