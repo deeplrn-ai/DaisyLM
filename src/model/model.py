@@ -124,3 +124,14 @@ class MLA(nn.Module):
         if use_cache:
             return final_output, updated_kv_for_layer
         return final_output 
+
+
+class MLP(nn.Module):
+    def __init__(self, dim: int, hidden_dim: int):
+        super().__init__()
+        self.l1 = nn.Linear(dim, hidden_dim)
+        self.l2 = nn.Linear(hidden_dim, dim)
+        self.l3 = nn.Linear(dim, hidden_dim)
+
+    def forward(self, x: torch.Tensor):
+        return self.l2(F.silu(self.l1(x)) * self.l3(x))
