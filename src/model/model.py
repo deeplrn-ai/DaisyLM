@@ -11,6 +11,7 @@ class ModelConfig:
     intermediate_size: int = 3072
     d_latent: int = 32
     d_rope_sub: int = 16
+    max_seq_len: int = 2048
     attn_dropout: float = 0.1
     ffn_dropout: float = 0.1
 
@@ -157,3 +158,35 @@ class Block(nn.Module):
         x = x + ffn_output
 
         return x, updated_key_values if use_cache else None
+
+
+class Model(nn.Module):
+    def __init__(self, config: ModelConfig):
+        super().__init__()
+        self.embed = nn.Embedding(config.vocab_size, config.d_model)
+        self.layers = nn.ModuleList([Block(config) for _ in range(config.n_layers)])
+        self.norm = RMSNorm(config.d_model)
+        self.vocab_proj = nn.Linear(config.d_model, config.vocab_size, bias=False)
+        self.vocab_proj.weight = self.embed.weight.transpose(0, 1)
+        self.freqs_cis = precompute_freq_cis(config.d_head, config.max_seq_len)
+
+    def forward(self, input_ids: torch.Tensor, past_key_values=None, use_cache=False):
+        x = self.embed(input_ids)
+        new_past_key_values = []
+
+        seq_len = input_ids.shape[1]
+        past_seq_len = past_key_values[0][0].shape[-2] if past_key_values else 0
+        current_seq_len = self.freqs_cis[past_seq_len : seq_len + past_seq_len]
+
+        for i, layer in enumerate(self.layers):
+            current_past_kv = past_key_values[i] if past_key_values else None
+            x, updated_kv = layer(x, current_seq_len, past_key_values=current_past_kv, use_cache=use_cache)
+            if use_cache:
+                new_past_key_values.append(updated_kv)
+
+        output = self.norm(x)
+        logits = self.vocab_proj(output)
+
+        if use_cache:
+            return logits, new_past_key_values
+        return logits
